@@ -1,10 +1,12 @@
+import os
 import threading
 from datetime import datetime
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from .config import AUTO_INTERVAL_MS, ASSET_WRONG_SOUND_REL
+from .config import AUTO_INTERVAL_MS, ASSET_WRONG_SOUND_REL, ASSET_OK_SOUND_REL
+
 from .models import CheckResult
 from .db import DbLogger
 from .resources import resource_path
@@ -17,6 +19,7 @@ from .popup_reader import (
 )
 
 WRONG_SOUND = resource_path(ASSET_WRONG_SOUND_REL)
+OK_SOUND = resource_path(ASSET_OK_SOUND_REL)
 
 class App(tk.Tk):
     def __init__(self):
@@ -165,10 +168,21 @@ class App(tk.Tk):
         self._render_status(res)
         self._add_history_row(res)
 
+        
+
         threading.Thread(target=self._save_db_safe, args=(res,), daemon=True).start()
 
-        if res.result in ("NG", "ERROR"):
+
+
+        if res.result == "OK":
+            play_mp3(OK_SOUND)
+        elif res.result in ("NG", "ERROR"):
             play_mp3(WRONG_SOUND)
+
+
+
+
+
 
         if show_popup:
             if res.result == "OK":
