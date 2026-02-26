@@ -18,3 +18,6 @@ TABLE_NAME = "dbo.FirmwareCheckHistory"
 # Assets
 ASSET_WRONG_SOUND_REL = os.path.join("assets", "Wrong.mp3")
 ASSET_OK_SOUND_REL = os.path.join("assets", "Ok.mp3")
+
+# Unlock password for editing Input Version
+UNLOCK_PASSWORDS = {"SMTadmin123@", "FirmwareChecker123@"}
