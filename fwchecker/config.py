@@ -1,7 +1,18 @@
 import os
 import re
 
-FW_PATTERN = re.compile(r"Firmware\s*Version\s*:\s*([0-9A-Za-z._\-]+)", re.IGNORECASE)
+# POPUP: "Firmware Version : 24071721"
+FW_POPUP_PATTERN = re.compile(
+    r"Firmware\s*Version\s*:\s*([0-9A-Za-z._\-]+)",
+    re.IGNORECASE
+)
+
+# INLINE (BurnAP_Merge): "FW Version: 25101512"
+FW_INLINE_PATTERN = re.compile(
+    r"FW\s*Version\s*:?\s*([0-9A-Za-z._\-]+)",
+    re.IGNORECASE
+)
+
 AUTO_INTERVAL_MS = 500
 
 # SQL Server connection (ưu tiên ENV; fallback theo bạn cung cấp)
@@ -17,7 +28,7 @@ TABLE_NAME = "dbo.FirmwareCheckHistory"
 
 # Assets
 ASSET_WRONG_SOUND_REL = os.path.join("assets", "Wrong.mp3")
-ASSET_OK_SOUND_REL = os.path.join("assets", "Ok.mp3")
+ASSET_OK_SOUND_REL    = os.path.join("assets", "Ok.mp3")
 
 # Unlock password for editing Input Version
 UNLOCK_PASSWORDS = {"SMTadmin123@", "FirmwareChecker123@"}

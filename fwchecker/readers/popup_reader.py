@@ -1,6 +1,5 @@
 from pywinauto import Desktop
-
-from .config import FW_PATTERN
+from .win_title import fast_window_title
 
 def _dedup_keep_order(texts: list[str]) -> list[str]:
     seen = set()
@@ -50,6 +49,9 @@ def safe_texts_uia(win):
     return _dedup_keep_order(texts)
 
 def safe_texts_win32(win):
+    """
+    IMPORTANT: tránh win.window_text() vì có window treo.
+    """
     texts = []
 
     def add(s):
@@ -59,38 +61,56 @@ def safe_texts_win32(win):
         if s:
             texts.append(s)
 
-    try: add(win.window_text())
-    except Exception: pass
+    # ưu tiên element_info.name
+    try:
+        add(getattr(win.element_info, "name", None))
+    except Exception:
+        pass
 
+    # texts() đôi khi vẫn OK, nhưng nếu lỗi thì bỏ qua
     try:
         for t in win.texts():
             add(t)
     except Exception:
         pass
 
+    # children: lấy element_info.name
     try:
         for ch in win.children():
-            try: add(ch.window_text())
-            except Exception: pass
+            try:
+                add(getattr(ch.element_info, "name", None))
+            except Exception:
+                pass
     except Exception:
         pass
 
     return _dedup_keep_order(texts)
 
-def find_windows_by_title_contains(title_key: str):
+def find_windows_by_title_contains(title_key: str, max_scan: int = 120):
+    """
+    SAFE scan title bằng fast_window_title(handle) -> không treo
+    """
     title_key_l = (title_key or "").strip().lower()
     if not title_key_l:
         return []
 
     wins = Desktop(backend="win32").windows(visible_only=True)
     matched = []
+
+    count = 0
     for w in wins:
+        count += 1
+        if count > max_scan:
+            break
         try:
-            title = (w.window_text() or "").strip()
+            hwnd = w.handle
         except Exception:
             continue
-        if title_key_l in title.lower():
+
+        title = fast_window_title(hwnd)
+        if title_key_l in (title or "").lower():
             matched.append(w)
+
     return matched
 
 def find_windows_by_content_contains(content_key: str, max_scan: int = 80):
@@ -140,12 +160,15 @@ def window_contains_confirm_key(win, key: str) -> bool:
     except Exception:
         return False
 
-def read_firmware_version_hybrid(win):
+def read_version_hybrid(win, pattern):
+    """
+    Read version from UIA first, then WIN32 texts, then title fallback.
+    """
     # UIA
     try:
         uia_win = Desktop(backend="uia").window(handle=win.handle)
         joined = "\n".join(safe_texts_uia(uia_win))
-        m = FW_PATTERN.search(joined)
+        m = pattern.search(joined)
         if m:
             return m.group(1).strip()
     except Exception:
@@ -154,16 +177,16 @@ def read_firmware_version_hybrid(win):
     # WIN32
     try:
         joined = "\n".join(safe_texts_win32(win))
-        m = FW_PATTERN.search(joined)
+        m = pattern.search(joined)
         if m:
             return m.group(1).strip()
     except Exception:
         pass
 
-    # title fallback
+    # title fallback (safe)
     try:
-        title = win.window_text() or ""
+        title = fast_window_title(win.handle)
     except Exception:
         title = ""
-    m = FW_PATTERN.search(title)
+    m = pattern.search(title or "")
     return m.group(1).strip() if m else None
